@@ -2,3 +2,4 @@ streamlit==1.28.1
 transformers==4.35.2
 torch
 pyvi
+pandas

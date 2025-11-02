@@ -10,14 +10,14 @@ class SentimentClassifier:
     def __init__(self):
         """
         Hybrid classifier: Preprocessing + Rule-based + Transformer
-        Xử lý: có dấu, không dấu, viết tắt, typo
+        Xử lý: có dấu, không dấu, viết tắt, typo, PHỦ ĐỊNH
         """
         # Load Transformer model (PhoBERT sentiment)
         try:
             print("Đang load model Transformer (PhoBERT)...")
             self.model = RobertaForSequenceClassification.from_pretrained("wonrax/phobert-base-vietnamese-sentiment")
             self.tokenizer = AutoTokenizer.from_pretrained("wonrax/phobert-base-vietnamese-sentiment", use_fast=False)
-            self.model_name = 'Hybrid: Preprocessing + Rule-based + PhoBERT'
+            self.model_name = 'Hybrid: Rule-based + PhoBERT + Negation Handling'
             print("✓ Model loaded thành công!")
         except Exception as e:
             print(f"⚠ Không load được Transformer: {e}")
@@ -25,16 +25,22 @@ class SentimentClassifier:
             self.tokenizer = None
             self.model_name = 'Rule-based only'
 
+        # Từ phủ định tiếng Việt
+        self.negation_words = {
+            'không', 'chẳng', 'chả', 'khong', 'chang', 'cha',
+            'ko', 'k', 'hok', 'hong', 'hông',
+            'chưa', 'chua', 'chưa bao giờ',
+            'đâu có', 'đâu', 'đéo', 'éo'  # Từ lóng
+        }
+
         # Từ điển viết tắt tiếng Việt
         self.abbreviations = {
-            # Thông dụng
             'k': 'không', 'ko': 'không', 'hok': 'không', 'khong': 'không',
             'dc': 'được', 'đc': 'được', 'duoc': 'được',
             'mn': 'mọi người', 'mng': 'mọi người',
             'tks': 'cảm ơn', 'thanks': 'cảm ơn', 'thank': 'cảm ơn',
             'oke': 'ok', 'okie': 'ok', 'oki': 'ok',
             'vs': 'với', 'ms': 'mới', 'nc': 'nói chuyện',
-            # Cảm xúc
             'hpy': 'vui', 'happy': 'vui', 'vui vui': 'vui',
             'sad': 'buồn', 'buon': 'buồn',
             'met': 'mệt', 'met moi': 'mệt mỏi', 'metmoi': 'mệt mỏi'
@@ -54,7 +60,12 @@ class SentimentClassifier:
             'that bai', 'thất bại', 'kem', 'chan', 'chán', 'ghet', 'ghét',
             'xau', 'xấu', 'dau', 'đau', 'kho chiu', 'khó chịu',
             'met moi', 'mệt mỏi', 'met', 'mệt', 'kinh khung', 'kinh khủng',
-            'tuc', 'tức', 'gian', 'giận', 'that vong', 'thất vọng'
+            'tuc', 'tức', 'gian', 'giận', 'that vong', 'thất vọng',
+            # Thêm các từ bị thiếu
+            'rot', 'rớt', 'truot', 'trượt', 'trut', 'trot',  # Rớt (thi, môn)
+            'te hai', 'tệ hại', 'do te', 'dở tệ', 'toi te', 'tồi tệ',
+            'phuc vu te', 'phục vụ tệ', 'chat luong kem', 'chất lượng kém',
+            'khong tot', 'không tốt', 'khong hai long', 'không hài lòng'
         }
 
         self.neutral_words = {
@@ -68,7 +79,6 @@ class SentimentClassifier:
         """Loại bỏ dấu tiếng Việt để xử lý không dấu"""
         nfd = unicodedata.normalize('NFD', text)
         result = ''.join([c for c in nfd if not unicodedata.combining(c)])
-        # Xử lý các ký tự đặc biệt tiếng Việt
         result = result.replace('đ', 'd').replace('Đ', 'D')
         return result
 
@@ -78,32 +88,63 @@ class SentimentClassifier:
         expanded = []
         for word in words:
             word_lower = word.lower()
-            # Kiểm tra từ điển viết tắt
             if word_lower in self.abbreviations:
                 expanded.append(self.abbreviations[word_lower])
             else:
                 expanded.append(word)
         return ' '.join(expanded)
 
+    def detect_negation(self, text):
+        """
+        Phát hiện phủ định trong câu
+
+        Returns:
+            bool: True nếu có phủ định trước từ cảm xúc
+        """
+        text_lower = text.lower()
+        words = text_lower.split()
+
+        # Tìm vị trí từ phủ định
+        negation_positions = []
+        for i, word in enumerate(words):
+            if word in self.negation_words:
+                negation_positions.append(i)
+
+        if not negation_positions:
+            return False
+
+        # Kiểm tra xem có từ cảm xúc sau phủ định không
+        # Phủ định có tác dụng trong khoảng 3-4 từ sau nó
+        for neg_pos in negation_positions:
+            # Check 4 từ sau từ phủ định
+            window = words[neg_pos:min(neg_pos + 5, len(words))]
+
+            # Check có từ cảm xúc trong window không
+            for word in window:
+                word_no_accent = self.remove_accents(word)
+
+                # Check positive words
+                for pos_word in self.positive_words:
+                    pos_word_no_accent = self.remove_accents(pos_word)
+                    if pos_word in word or pos_word_no_accent in word_no_accent:
+                        return True  # Có phủ định trước từ tích cực
+
+                # Check negative words
+                for neg_word in self.negative_words:
+                    neg_word_no_accent = self.remove_accents(neg_word)
+                    if neg_word in word or neg_word_no_accent in word_no_accent:
+                        # Phủ định + từ tiêu cực = tích cực/trung tính
+                        return True
+
+        return False
+
     def preprocess_text(self, text):
-        """
-        Tiền xử lý văn bản toàn diện
-        """
-        # 1. Chuẩn hóa Unicode
+        """Tiền xử lý văn bản toàn diện"""
         text = unicodedata.normalize('NFC', text)
-
-        # 2. Lowercase
         text = text.lower().strip()
-
-        # 3. Mở rộng viết tắt
         text = self.expand_abbreviations(text)
-
-        # 4. Xóa ký tự đặc biệt (giữ lại chữ, số, khoảng trắng)
         text = re.sub(r'[^\w\s]', ' ', text)
-
-        # 5. Xóa khoảng trắng thừa
         text = ' '.join(text.split())
-
         return text
 
     def preprocess_for_transformer(self, text):
@@ -114,7 +155,7 @@ class SentimentClassifier:
 
     def rule_based_classify(self, text):
         """
-        Phân loại dựa trên từ điển
+        Phân loại dựa trên từ điển với xử lý mơ hồ (ambiguity)
         Xử lý cả có dấu và không dấu
         """
         text_lower = text.lower()
@@ -140,12 +181,21 @@ class SentimentClassifier:
             if word in text_lower or word_no_accent in text_no_accent:
                 neu_score += 1
 
-        # Quyết định
-        if pos_score > 0 and pos_score >= neg_score:
-            return 'POSITIVE'
-        elif neg_score > 0 and neg_score > pos_score:
+        # === XỬ LÝ MƠ HỒ (CRITICAL FIX) ===
+        # Nếu có CẢ từ tích cực VÀ tiêu cực (VD: "vui, rớt môn")
+        # → Nhường cho Transformer xử lý (hiểu ngữ cảnh tốt hơn)
+        if pos_score > 0 and neg_score > 0:
+            return None  # Không quyết định, để Transformer xử lý
+
+        # === QUYẾT ĐỊNH ĐƠN GIẢN ===
+        # Ưu tiên từ tiêu cực (vì thường ảnh hưởng mạnh hơn)
+        if neg_score > 0:
             return 'NEGATIVE'
-        elif neu_score > 0:
+
+        if pos_score > 0:
+            return 'POSITIVE'
+
+        if neu_score > 0:
             return 'NEUTRAL'
 
         return None
@@ -156,18 +206,13 @@ class SentimentClassifier:
             return None
 
         try:
-            # Word segmentation (required for PhoBERT)
             segmented = ViTokenizer.tokenize(text)
-
-            # Tokenize
             input_ids = torch.tensor([self.tokenizer.encode(segmented)])
 
-            # Predict
             with torch.no_grad():
                 out = self.model(input_ids)
                 logits = out.logits.softmax(dim=-1).tolist()[0]
 
-            # Map to sentiments: [NEG, POS, NEU]
             labels = ['NEGATIVE', 'POSITIVE', 'NEUTRAL']
             sentiment = labels[logits.index(max(logits))]
             return sentiment
@@ -180,11 +225,11 @@ class SentimentClassifier:
         Phân loại cảm xúc từ văn bản tiếng Việt
 
         Quy trình:
-        1. Preprocessing cho Rule-based (xóa dấu câu,...)
-        2. Rule-based (ưu tiên)
-        3. Preprocessing cho Transformer (chỉ mở rộng viết tắt)
-        4. Transformer (fallback với text đã xử lý viết tắt)
-        5. NEUTRAL (default)
+        1. Kiểm tra phủ định
+        2. Nếu có phủ định → Dùng TRANSFORMER (ưu tiên)
+        3. Nếu không phủ định → Thử Rule-based trước
+        4. Fallback: Transformer
+        5. Default: NEUTRAL
 
         Args:
             text (str): Câu tiếng Việt (có/không dấu, viết tắt)
@@ -198,34 +243,47 @@ class SentimentClassifier:
         if not text or len(text.strip()) <= 3:
             raise ValueError("Câu không hợp lệ, thử lại (quá ngắn hoặc rỗng).")
 
-        # Bước 1: Preprocessing cho Rule-based (xóa dấu câu,...)
+        # Preprocessing
         processed_text_rule = self.preprocess_text(text)
-
-        # Bước 2: Rule-based (ưu tiên)
-        rule_sentiment = self.rule_based_classify(processed_text_rule)
-        if rule_sentiment:
-            return {"text": text, "sentiment": rule_sentiment}
-
-        # Bước 3: Preprocessing cho Transformer (chỉ mở rộng viết tắt)
         processed_text_transformer = self.preprocess_for_transformer(text)
 
-        # Bước 4: Transformer (fallback với text đã xử lý viết tắt)
-        transformer_sentiment = self.transformer_classify(processed_text_transformer)
-        if transformer_sentiment:
-            return {"text": text, "sentiment": transformer_sentiment}
+        # Bước 1: Kiểm tra phủ định
+        has_negation = self.detect_negation(processed_text_rule)
 
-        # Bước 5: Default
-        return {"text": text, "sentiment": "NEUTRAL"}
+        if has_negation:
+            # Ưu tiên Transformer nếu có phủ định (xử lý ngữ cảnh tốt hơn)
+            transformer_sentiment = self.transformer_classify(processed_text_transformer)
+            if transformer_sentiment:
+                return {"text": text, "sentiment": transformer_sentiment}
+
+            # Fallback: Rule-based nhưng cẩn thận với phủ định
+            # Nếu detect phủ định mà không có model → trả NEUTRAL an toàn
+            return {"text": text, "sentiment": "NEUTRAL"}
+
+        else:
+            # Không có phủ định → Rule-based (ưu tiên)
+            rule_sentiment = self.rule_based_classify(processed_text_rule)
+            if rule_sentiment:
+                return {"text": text, "sentiment": rule_sentiment}
+
+            # Fallback: Transformer
+            transformer_sentiment = self.transformer_classify(processed_text_transformer)
+            if transformer_sentiment:
+                return {"text": text, "sentiment": transformer_sentiment}
+
+            # Default
+            return {"text": text, "sentiment": "NEUTRAL"}
 
     def get_model_info(self):
         """Trả về thông tin model"""
         return {
             "model_name": self.model_name,
-            "method": "Preprocessing + Rule-based + Transformer",
+            "method": "Negation-aware Hybrid (Rule-based + PhoBERT)",
             "features": [
                 "Xử lý có/không dấu",
                 "Mở rộng viết tắt",
-                "Fuzzy matching",
-                "Fallback Transformer"
+                "Phát hiện phủ định",
+                "Ưu tiên Transformer cho phủ định",
+                "Fallback strategy"
             ]
         }

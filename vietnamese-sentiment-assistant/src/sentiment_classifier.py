@@ -1,5 +1,4 @@
-from transformers import RobertaForSequenceClassification, AutoTokenizer
-import torch
+from transformers import pipeline
 import warnings
 import re
 import unicodedata
@@ -9,20 +8,18 @@ warnings.filterwarnings('ignore')
 class SentimentClassifier:
     def __init__(self):
         """
-        Hybrid classifier: Preprocessing + Rule-based + Transformer
+        Hybrid classifier: Preprocessing + Rule-based + Transformer Pipeline
         Xử lý: có dấu, không dấu, viết tắt, typo, PHỦ ĐỊNH
         """
-        # Load Transformer model (PhoBERT sentiment)
+        # Load Transformer pipeline (PhoBERT sentiment)
         try:
-            print("Đang load model Transformer (PhoBERT)...")
-            self.model = RobertaForSequenceClassification.from_pretrained("wonrax/phobert-base-vietnamese-sentiment")
-            self.tokenizer = AutoTokenizer.from_pretrained("wonrax/phobert-base-vietnamese-sentiment", use_fast=False)
-            self.model_name = 'Hybrid: Rule-based + PhoBERT + Negation Handling'
-            print("✓ Model loaded thành công!")
+            print("Đang load pipeline Transformer (PhoBERT)...")
+            self.pipeline = pipeline("sentiment-analysis", model="wonrax/phobert-base-vietnamese-sentiment", tokenizer="wonrax/phobert-base-vietnamese-sentiment")
+            self.model_name = 'Hybrid: Rule-based + PhoBERT Pipeline + Negation Handling'
+            print("✓ Pipeline loaded thành công!")
         except Exception as e:
-            print(f"⚠ Không load được Transformer: {e}")
-            self.model = None
-            self.tokenizer = None
+            print(f"⚠ Không load được pipeline: {e}")
+            self.pipeline = None
             self.model_name = 'Rule-based only'
 
         # Từ phủ định tiếng Việt
@@ -201,20 +198,23 @@ class SentimentClassifier:
         return None
 
     def transformer_classify(self, text):
-        """Phân loại bằng PhoBERT (word-segmented)"""
-        if not self.model or not self.tokenizer:
+        """Phân loại bằng PhoBERT pipeline (word-segmented)"""
+        if not self.pipeline:
             return None
 
         try:
             segmented = ViTokenizer.tokenize(text)
-            input_ids = torch.tensor([self.tokenizer.encode(segmented)])
+            result = self.pipeline(segmented)
+            sentiment = result[0]['label']
 
-            with torch.no_grad():
-                out = self.model(input_ids)
-                logits = out.logits.softmax(dim=-1).tolist()[0]
+            # Map abbreviated labels to full labels
+            label_mapping = {
+                'POS': 'POSITIVE',
+                'NEG': 'NEGATIVE',
+                'NEU': 'NEUTRAL'
+            }
+            sentiment = label_mapping.get(sentiment, sentiment)
 
-            labels = ['NEGATIVE', 'POSITIVE', 'NEUTRAL']
-            sentiment = labels[logits.index(max(logits))]
             return sentiment
         except Exception as e:
             print(f"Error in transformer classify: {e}")

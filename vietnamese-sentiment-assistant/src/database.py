@@ -12,9 +12,8 @@ class SentimentDatabase:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        # Tạo bảng sentiment_history
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS sentiment_history (
+            CREATE TABLE IF NOT EXISTS sentiments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 text TEXT NOT NULL,
                 sentiment TEXT NOT NULL,
@@ -32,7 +31,7 @@ class SentimentDatabase:
             cursor = conn.cursor()
 
             cursor.execute('''
-                INSERT INTO sentiment_history (text, sentiment, timestamp)
+                INSERT INTO sentiments (text, sentiment, timestamp)
                 VALUES (?, ?, ?)
             ''', (text, sentiment, datetime.now()))
 
@@ -51,7 +50,7 @@ class SentimentDatabase:
 
             cursor.execute('''
                 SELECT text, sentiment, timestamp
-                FROM sentiment_history
+                FROM sentiments
                 ORDER BY timestamp DESC
                 LIMIT ?
             ''', (limit,))
@@ -79,7 +78,7 @@ class SentimentDatabase:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            cursor.execute('DELETE FROM sentiment_history')
+            cursor.execute('DELETE FROM sentiments')
             conn.commit()
             conn.close()
             return True
@@ -95,7 +94,7 @@ class SentimentDatabase:
 
             cursor.execute('''
                 SELECT sentiment, COUNT(*) as count
-                FROM sentiment_history
+                FROM sentiments
                 GROUP BY sentiment
                 ORDER BY count DESC
             ''')

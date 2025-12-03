@@ -1,115 +1,164 @@
-# Vietnamese Sentiment Assistant
+# 🇻🇳 Vietnamese Sentiment Assistant
 
-Dự án xây dựng trợ lý phân loại cảm xúc tiếng Việt sử dụng Transformer (PhoBERT). Ứng dụng hỗ trợ phân loại cảm xúc thành 3 loại: POSITIVE, NEUTRAL, NEGATIVE, với khả năng xử lý văn bản tiếng Việt có dấu, không dấu, viết tắt và lỗi chính tả.
+> **Trợ lý phân loại cảm xúc tiếng Việt sử dụng Transformer (PhoBERT)**
 
-## Tính năng chính
+Ứng dụng phân loại cảm xúc văn bản tiếng Việt thành 3 loại: **POSITIVE** (Tích cực), **NEUTRAL** (Trung lập), **NEGATIVE** (Tiêu cực). Hỗ trợ xử lý văn bản có dấu, không dấu, viết tắt và phát hiện phủ định.
 
-- **Phân loại cảm xúc**: Sử dụng mô hình hybrid (rule-based + PhoBERT) để phân loại chính xác.
-- **Xử lý tiếng Việt**: Hỗ trợ có/không dấu, viết tắt, từ khóa cảm xúc.
-- **Lưu trữ lịch sử**: Lưu kết quả phân loại vào cơ sở dữ liệu SQLite cục bộ.
-- **Giao diện web**: Dễ sử dụng với Streamlit.
-- **Đóng gói executable**: Chạy độc lập mà không cần cài đặt Python.
+---
 
-## Yêu cầu hệ thống
+## 📋 Thông tin đồ án
+
+| Mục                | Nội dung                                                                 |
+| ------------------ | ------------------------------------------------------------------------ |
+| **Tên đồ án**      | Trợ lý phân loại cảm xúc tiếng Việt (Vietnamese Sentiment Assistant)     |
+| **Mục đích**       | Phân loại cảm xúc (tích cực, trung tính, tiêu cực) từ văn bản tiếng Việt |
+| **Ngôn ngữ**       | Python                                                                   |
+| **Thư viện chính** | Hugging Face Transformers, PhoBERT, Streamlit, SQLite                    |
+| **Độ chính xác**   | ≥90% trên 10 test cases (vượt yêu cầu 65%)                               |
+
+---
+
+## ✨ Tính năng chính
+
+- 🤖 **Phân loại cảm xúc**: Sử dụng mô hình Hybrid (Rule-based + PhoBERT Transformer)
+- 🇻🇳 **Xử lý tiếng Việt**: Hỗ trợ có/không dấu, viết tắt (ko, dc, tks...), phát hiện phủ định
+- 💾 **Lưu trữ lịch sử**: Lưu kết quả vào SQLite với bảng `sentiments` (id, text, sentiment, timestamp)
+- 🌐 **Giao diện web**: Streamlit đẹp, dễ sử dụng
+- 📊 **Thống kê**: Hiển thị số lượng theo từng loại cảm xúc
+
+---
+
+## 🖥️ Yêu cầu hệ thống
 
 - Python 3.8+
 - RAM: 4GB+ (cho mô hình Transformer)
 - Dung lượng: 2GB+ (cho mô hình và dependencies)
+- Kết nối internet (lần đầu để tải mô hình)
 
-## Cài đặt
+---
 
-1. **Cài đặt Python 3.8+** từ [python.org](https://www.python.org/).
-2. **Cài đặt dependencies**:
-   ```
-   pip install -r requirements.txt
-   ```
-3. **Tải mô hình**: Mô hình PhoBERT sẽ tự động tải khi chạy lần đầu.
+## 🚀 Cài đặt & Chạy ứng dụng
 
-## Chạy ứng dụng
+### Bước 1: Cài đặt dependencies
 
-### Cách 1: Web App (Khuyến nghị)
-
-Chạy lệnh sau trong thư mục gốc của dự án:
-
-```
-streamlit run src/main.py
+```bash
+pip install -r requirements.txt
 ```
 
-Ứng dụng sẽ mở trong trình duyệt tại `http://localhost:8501`.
+### Bước 2: Chạy ứng dụng Web (Khuyến nghị)
 
-### Cách 2: Script Python
-
-Chạy trực tiếp script:
-
-```
-python src/main.py
+```bash
+cd vietnamese-sentiment-assistant
+python -m streamlit run src/main.py
 ```
 
-### Cách 3: Executable (.exe) - Chạy độc lập
+Ứng dụng sẽ mở trong trình duyệt tại `http://localhost:8501`
 
-#### Tạo file .exe
+### Bước 3: Chạy Test Cases
 
-1. Cài đặt PyInstaller:
-
-   ```
-   pip install pyinstaller
-   ```
-
-2. Tạo executable:
-   ```
-   pyinstaller --onefile --noconsole --add-data "src;src" src/main.py
-   ```
-   - File `main.exe` sẽ được tạo trong thư mục `dist/`.
-
-#### Chạy .exe
-
-- Double-click vào `main.exe` để chạy ứng dụng.
-- Ứng dụng sẽ tự động mở trình duyệt hoặc chạy trong cửa sổ console.
-
-## Sử dụng
-
-1. Nhập câu tiếng Việt vào ô văn bản (ví dụ: "Hôm nay tôi rất vui").
-2. Nhấn nút "Phân loại cảm xúc".
-3. Xem kết quả phân loại và độ tin cậy.
-4. Lịch sử phân loại được hiển thị bên dưới.
-
-## Test
-
-Chạy test để kiểm tra độ chính xác:
-
-```
+```bash
 python tests/test_cases.py
 ```
 
-Yêu cầu: Độ chính xác >=65% (hiện tại đạt 100%).
+---
 
-## Cấu trúc dự án
+## 📖 Hướng dẫn sử dụng
+
+1. **Nhập câu tiếng Việt** vào ô văn bản (VD: "Hôm nay tôi rất vui")
+2. **Nhấn nút** "Phân loại cảm xúc"
+3. **Xem kết quả**:
+   - 😊 **Tích cực** (màu xanh)
+   - 😐 **Trung lập** (màu xanh dương)
+   - 😢 **Tiêu cực** (màu đỏ)
+4. **Xem lịch sử** phân loại bên dưới
+
+---
+
+## 🧪 Bộ Test Cases (10 câu theo đề bài)
+
+| STT | Đầu vào               | Đầu ra mong đợi |
+| --- | --------------------- | --------------- |
+| 1   | Hôm nay tôi rất vui   | POSITIVE        |
+| 2   | Món ăn này dở quá     | NEGATIVE        |
+| 3   | Thời tiết bình thường | NEUTRAL         |
+| 4   | Rat vui hom nay       | POSITIVE        |
+| 5   | Công việc ổn định     | NEUTRAL         |
+| 6   | Phim này hay lắm      | POSITIVE        |
+| 7   | Tôi buồn vì thất bại  | NEGATIVE        |
+| 8   | Ngày mai đi học       | NEUTRAL         |
+| 9   | Dịch vụ quá tệ        | NEGATIVE        |
+| 10  | Cam thay binh thuong  | NEUTRAL         |
+
+**Kết quả**: ✅ **90% (9/10)** - Vượt yêu cầu 65%
+
+---
+
+## 📂 Cấu trúc dự án
 
 ```
 vietnamese-sentiment-assistant/
 ├── src/
-│   ├── main.py              # Giao diện Streamlit
-│   ├── sentiment_classifier.py  # Logic phân loại cảm xúc
-│   └── database.py          # Quản lý cơ sở dữ liệu
+│   ├── main.py                  # Giao diện Streamlit
+│   ├── sentiment_classifier.py  # Logic phân loại cảm xúc (Hybrid)
+│   └── database.py              # Quản lý SQLite (bảng sentiments)
 ├── tests/
-│   └── test_cases.py        # Test cases
-├── requirements.txt         # Dependencies
-└── README.md                # Tài liệu này
+│   └── test_cases.py            # 10 test cases theo đề bài
+├── requirements.txt             # Dependencies
+└── README.md                    # Tài liệu này
 ```
 
-## Lưu ý kỹ thuật
+---
 
-- **Mô hình**: Sử dụng PhoBERT (wonrax/phobert-base-vietnamese-sentiment) cho độ chính xác cao với tiếng Việt.
-- **Xử lý văn bản**: Bao gồm chuẩn hóa Unicode, mở rộng viết tắt, loại bỏ dấu câu cho rule-based.
-- **Lưu trữ**: SQLite cục bộ, không cần server database.
-- **Performance**: Mô hình load một lần khi khởi động, phân loại nhanh (<1s/câu).
+## 🔧 Kiến trúc hệ thống
 
-## Troubleshooting
+```
+[Đầu vào: Câu tiếng Việt]
+        ↓
+[Tiền xử lý] → Chuẩn hóa Unicode, mở rộng viết tắt, loại dấu câu
+        ↓
+[Phát hiện phủ định] → Kiểm tra từ phủ định (không, chưa, chẳng...)
+        ↓
+    ┌───┴───┐
+    ↓       ↓
+[Rule-based]  [PhoBERT Transformer]
+    ↓       ↓
+    └───┬───┘
+        ↓
+[Kết quả: POSITIVE / NEUTRAL / NEGATIVE]
+        ↓
+[Lưu SQLite + Hiển thị UI]
+```
 
-- **Lỗi load mô hình**: Kiểm tra kết nối internet để tải mô hình từ Hugging Face.
-- **Lỗi dependencies**: Đảm bảo Python 3.8+ và chạy `pip install -r requirements.txt`.
-- **Không chạy được .exe**: Đảm bảo antivirus không chặn file, hoặc thử chạy với quyền admin.
+---
 
-## License
+## 🛠️ Công nghệ sử dụng
+
+| Thành phần    | Công nghệ                                          |
+| ------------- | -------------------------------------------------- |
+| **NLP Model** | PhoBERT (wonrax/phobert-base-vietnamese-sentiment) |
+| **Framework** | Hugging Face Transformers                          |
+| **Giao diện** | Streamlit                                          |
+| **Database**  | SQLite3                                            |
+| **Tokenizer** | PyVi (ViTokenizer)                                 |
+
+---
+
+## ⚠️ Troubleshooting
+
+| Lỗi                   | Giải pháp                                              |
+| --------------------- | ------------------------------------------------------ |
+| Không load được model | Kiểm tra kết nối internet để tải model từ Hugging Face |
+| Lỗi dependencies      | Chạy `pip install -r requirements.txt`                 |
+| streamlit không nhận  | Chạy `python -m streamlit run src/main.py`             |
+
+---
+
+## 📜 License
 
 Dự án này dành cho mục đích học thuật và nghiên cứu.
+
+---
+
+## 👨‍💻 Tác giả
+
+Đồ án môn học - Seminar Project 2025

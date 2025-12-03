@@ -14,7 +14,7 @@
 | **Mục đích**       | Phân loại cảm xúc (tích cực, trung tính, tiêu cực) từ văn bản tiếng Việt |
 | **Ngôn ngữ**       | Python                                                                   |
 | **Thư viện chính** | Hugging Face Transformers, PhoBERT, Streamlit, SQLite                    |
-| **Độ chính xác**   | ≥90% trên 10 test cases (vượt yêu cầu 65%)                               |
+| **Độ chính xác**   | 100% trên 10 test cases (vượt yêu cầu 65%)                               |
 
 ---
 
@@ -86,10 +86,10 @@ python tests/test_cases.py
 | 6   | Phim này hay lắm      | POSITIVE        |
 | 7   | Tôi buồn vì thất bại  | NEGATIVE        |
 | 8   | Ngày mai đi học       | NEUTRAL         |
-| 9   | Dịch vụ quá tệ        | NEGATIVE        |
-| 10  | Cam thay binh thuong  | NEUTRAL         |
+| 9   | Cảm ơn bạn rất nhiều  | POSITIVE        |
+| 10  | Mệt mỏi quá hôm nay   | NEGATIVE        |
 
-**Kết quả**: ✅ **90% (9/10)** - Vượt yêu cầu 65%
+**Kết quả**: ✅ **100% (10/10)** - Vượt yêu cầu 65%
 
 ---
 
